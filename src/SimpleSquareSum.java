@@ -20,8 +20,7 @@ public class SimpleSquareSum implements SquareSum {
                 threads.add(new SquareSumThread(partitionOfArray(values, numberOfThreads, i), phaser)));
         threads.forEach(Thread::start);
 
-        phaser.arriveAndAwaitAdvance();
-        phaser.arriveAndAwaitAdvance();
+        IntStream.range(0, 2).forEach((i) -> phaser.arriveAndAwaitAdvance());
 
         return threads.stream().mapToLong(SquareSumThread::getResult).sum();
     }
