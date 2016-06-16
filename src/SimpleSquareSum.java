@@ -13,29 +13,30 @@ import java.util.stream.IntStream;
 public class SimpleSquareSum implements SquareSum {
     @Override
     public long getSquareSum(int[] values, int numberOfThreads) {
-        long result = 0;
         Phaser phaser = new Phaser(1);
         List<SquareSumThread> threads = new ArrayList<>();
-        IntStream.range(0, numberOfThreads).forEach((i) -> threads.add(new SquareSumThread(partitionOfArray(values, numberOfThreads, i), phaser)));
-        threads.stream().forEach(Thread::start);
-        phaser.arriveAndAwaitAdvance();
-        System.out.println("Возведение в квадрат завершено");
-        phaser.arriveAndAwaitAdvance();
-        System.out.println("Суммы квадратов посчитаны");
 
-        for (SquareSumThread thread : threads) {
-            result += thread.getResult();
-        }
+        IntStream.range(0, numberOfThreads).forEach((i) ->
+                threads.add(new SquareSumThread(partitionOfArray(values, numberOfThreads, i), phaser)));
+        threads.forEach(Thread::start);
 
-        return result;
+        phaser.arriveAndAwaitAdvance();
+        phaser.arriveAndAwaitAdvance();
+
+        return threads.stream().mapToLong(SquareSumThread::getResult).sum();
     }
 
     private int[] partitionOfArray(int[] source, int partsCount, int partForReturn) {
-        int[] result = new int[0];
+        int[][] result = new int[partsCount][];
+        int partLength = source.length / partsCount;
+        int lastPartLength = partLength + source.length % partsCount;
 
+        for (int i = 0; i < partsCount; i++) {
+            result[i] = new int[i == partsCount - 1 ? lastPartLength : partLength];
+            System.arraycopy(source, partLength * i, result[i], 0, i == partsCount - 1 ? lastPartLength : partLength);
+        }
 
-
-        return result;
+        return result[partForReturn];
     }
 }
 
@@ -54,9 +55,11 @@ class SquareSumThread extends Thread {
     @Override
     public void run() {
         IntStream.range(0, values.length).forEach((i) -> values[i] *= values[i]);
+        System.out.println(Thread.currentThread().getName() + ": squaring completed");
         phaser.arriveAndAwaitAdvance();
 
         result = Arrays.stream(values).sum();
+        System.out.println(Thread.currentThread().getName() + ": summation completed");
         phaser.arriveAndDeregister();
     }
 
